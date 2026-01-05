@@ -19,14 +19,16 @@ function randomCode() {
 async function sendOtp(phone: string, code: string) {
   if (process.env.OTP_SMS_WEBHOOK) {
     try {
+      const headers: Record<string, string> = {
+        "content-type": "application/json",
+      };
+      if (process.env.OTP_SMS_TOKEN) {
+        headers.authorization = `Bearer ${process.env.OTP_SMS_TOKEN}`;
+      }
+
       await fetch(process.env.OTP_SMS_WEBHOOK, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: process.env.OTP_SMS_TOKEN
-            ? `Bearer ${process.env.OTP_SMS_TOKEN}`
-            : undefined,
-        },
+        headers,
         body: JSON.stringify({ phone, code }),
       });
       return;
@@ -77,7 +79,7 @@ export async function createSession(parentId: string) {
     },
   });
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -88,7 +90,7 @@ export async function createSession(parentId: string) {
 }
 
 export async function getCurrentParent() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
@@ -161,7 +163,7 @@ export async function verifyOtp(phone: string, code: string) {
 }
 
 export async function logout() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (token) {
     await prisma.session.deleteMany({
